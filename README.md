@@ -115,5 +115,4 @@ Dieses Projekt ist ideal für alle, die:
 ## 🛠 ToDo
 
 - [ ] Token automatisch per `refresh_token` verlängern
-- [ ] Webinterface für OAuth-Flow
-- [ ] Filter nach `bike` oder `gear` einbauen
+- [ ] Discord Push wenn erfolgreich
