@@ -58,12 +58,17 @@ def save_to_notion(activity):
 
     # Art of Bike zuweisen
     bike_type = activity.get("sport_type", "")
-    if "Gravel" or "Ride" in bike_type:
+
+    if bike_type == "GravelRide":
         bike_category = "Gravel"
-    elif "E-Bike" in bike_type:
+    elif bike_type == "Ride":
+        bike_category = "Gravel"
+    elif bike_type == "EBikeRide":
         bike_category = "E-MTB"
-    else:
+    elif bike_type in ["MountainBikeRide"]:
         bike_category = "MTB"
+    else:
+        bike_category = "Unbekannt"
 
     # Properties aufbauen
     props = {
@@ -85,8 +90,16 @@ def save_to_notion(activity):
     if description:
         props["Bemerkung"] = {"rich_text": [{"text": {"content": description}}]}
 
+    # Match Emoji
+    emoji_map = {
+        "MTB": "🚵",
+        "Gravel": "🚴",
+        "E-MTB": "🚵"
+    }
+    bike_emoji = emoji_map.get(bike_category, "🚴")
+
     # Seite in Notion erstellen
-    notion.pages.create(parent={"database_id": NOTION_DB_ID}, properties=props)
+    notion.pages.create(parent={"database_id": NOTION_DB_ID}, properties=props, icon={"type":"emoji", "emoji":bike_emoji})
 
 # Hauptfunktion
 def main():
