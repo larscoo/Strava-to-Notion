@@ -15,6 +15,19 @@ NOTION_DB_ID = os.getenv("NOTION_DB_ID")
 # Notion Client initialisieren
 notion = Client(auth=NOTION_TOKEN)
 
+def is_already_logged(strava_id):
+    query = {
+        "database_id": NOTION_DB_ID,
+        "filter": {
+            "property": "Strava ID",
+            "rich_text": {
+                "equals": str(strava_id)
+            }
+        }
+    }
+    results = notion.databases.query(**query)
+    return len(results["results"]) > 0
+
 def format_duration(seconds):
     t = timedelta(seconds=seconds)
     hours, remainder = divmod(t.seconds, 3600)
@@ -44,10 +57,10 @@ def save_to_notion(activity):
     strava_url = f"https://www.strava.com/activities/{activity.get('id')}"
 
     # Art of Bike zuweisen
-    bike_type = activity.get("sport_type", "Ride")
-    if "Gravel" in bike_type:
+    bike_type = activity.get("sport_type", "")
+    if "Gravel" or "Ride" in bike_type:
         bike_category = "Gravel"
-    elif "E-Bike" in bike_type or "E-MTB" in bike_type:
+    elif "E-Bike" in bike_type:
         bike_category = "E-MTB"
     else:
         bike_category = "MTB"
@@ -64,6 +77,7 @@ def save_to_notion(activity):
         "Höhenm.": {"number": elevation_gain},
         "Strava URL": {"url": strava_url},
         "Art of Bike": {"select": {"name": bike_category}},
+        "Strava ID": {"rich_text": [{"text": {"content": str(activity.get("id"))}}]},
     }
 
     if elevation_high is not None:
@@ -77,12 +91,18 @@ def save_to_notion(activity):
 # Hauptfunktion
 def main():
     activities = get_strava_activities()
+    valid_bike_sports = ["Ride", "GravelRide", "MountainBikeRide", "EBikeRide"]
+
     for act in activities:
-        if act.get("type") == "Ride":
-            save_to_notion(act)
-
-print("DEBUG – STRAVA_TOKEN:", STRAVA_TOKEN)
-
+        sport = act.get("sport_type", "")
+        if sport not in valid_bike_sports:
+            print(f"⏭ Überspringe {act.get('name')} ({sport}) – nicht relevant.")
+            continue
+        if is_already_logged(act["id"]):
+            print(f"⏭ {act['name']} – bereits eingetragen.")
+            continue
+        save_to_notion(act)
+        print(f"✅ Gespeichert: {act['name']}")
 
 if __name__ == "__main__":
     print("🔌 Skript start:")
