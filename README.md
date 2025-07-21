@@ -74,6 +74,7 @@ Die letzten 10 Fahrten werden (falls `type == "Ride"`) in Notion übernommen.
 - Dauer
 - Bemerkung
 - Strava URL
+- Strava ID
 
 > ✅ Stelle sicher, dass deine Spaltennamen und Typen in Notion exakt zur Struktur im Skript passen.
 
