@@ -3,18 +3,20 @@ import requests
 from notion_client import Client
 from dotenv import load_dotenv
 from datetime import timedelta
+from stravaTokenHandler import get_valid_access_token
 
 # .env laden
 load_dotenv()
 
 # ENV Variablen
-STRAVA_TOKEN = os.getenv("STRAVA_TOKEN")
+STRAVA_TOKEN = None
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 NOTION_DB_ID = os.getenv("NOTION_DB_ID")
 
 # Notion Client initialisieren
 notion = Client(auth=NOTION_TOKEN)
 
+# Prüfen, auf Duplikate
 def is_already_logged(strava_id):
     query = {
         "database_id": NOTION_DB_ID,
@@ -28,12 +30,36 @@ def is_already_logged(strava_id):
     results = notion.databases.query(**query)
     return len(results["results"]) > 0
 
+# Strava Token aktualisieren
+def refresh_strava_token():
+    print("🔁 Aktualisiere Strava Access Token...")
+    url = "https://www.strava.com/oauth/token"
+    data = {
+        "client_id": os.getenv("STRAVA_CLIENT_ID"),
+        "client_secret": os.getenv("STRAVA_CLIENT_SECRET"),
+        "grant_type": "refresh_token",
+        "refresh_token": os.getenv("STRAVA_REFRESH_TOKEN")
+    }
+
+    response = requests.post(url, data=data)
+    response.raise_for_status()
+    tokens = response.json()
+
+    new_access_token = tokens["access_token"]
+    new_refresh_token = tokens["refresh_token"]
+
+    # Optional: neue Tokens in .env zurückschreiben oder speichern
+    print("✅ Neuer Access Token erhalten.")
+    return new_access_token
+
+# Zeit formatieren
 def format_duration(seconds):
     t = timedelta(seconds=seconds)
     hours, remainder = divmod(t.seconds, 3600)
     minutes, _ = divmod(remainder, 60)
     return f"{hours}h {minutes}min" if hours else f"{minutes}min"
 
+# Aktivitäten laden
 def get_strava_activities():
     url = "https://www.strava.com/api/v3/athlete/activities"
     headers = {"Authorization": f"Bearer {STRAVA_TOKEN}"}
@@ -42,6 +68,7 @@ def get_strava_activities():
     response.raise_for_status()
     return response.json()
 
+# Aktivitäten speichern
 def save_to_notion(activity):
     title = activity.get("name")
     date = activity.get("start_date_local")
@@ -119,4 +146,5 @@ def main():
 
 if __name__ == "__main__":
     print("🔌 Skript start:")
+    STRAVA_TOKEN = get_valid_access_token()
     main()
