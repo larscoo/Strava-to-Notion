@@ -45,6 +45,8 @@ Erstelle im Projektverzeichnis eine Datei `.env`:
 STRAVA_TOKEN=dein_strava_access_token
 NOTION_TOKEN=dein_notion_integration_token
 NOTION_DB_ID=deine_notion_datenbank_id
+DISCORD_WEBHOOK=https://discord.com/api/webhooks/xyz
+
 ```
 
 > ℹ️ Hol dir dein `access_token` von Strava über OAuth:  
@@ -115,4 +117,4 @@ Dieses Projekt ist ideal für alle, die:
 
 ## 🛠 ToDo
 
-- [ ] Discord Push wenn erfolgreich
+- [ ] 

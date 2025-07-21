@@ -25,6 +25,22 @@ logging.basicConfig(
 # Notion Client initialisieren
 notion = Client(auth=NOTION_TOKEN)
 
+# Discord Webhook Funktion
+def send_discord_message(content):
+    webhook_url = os.getenv("DISCORD_WEBHOOK")
+    if not webhook_url:
+        logging.warning("📭 Kein Webhook gesetzt – Discord Nachricht wird übersprungen.")
+        return
+    payload = {"content": content}
+    try:
+        response = requests.post(webhook_url, json=payload)
+        if response.status_code == 204:
+            logging.info("✅ Discord Nachricht gesendet.")
+        else:
+            logging.warning(f"⚠️ Discord Fehler: {response.status_code} – {response.text}")
+    except Exception as e:
+        logging.error(f"❌ Fehler beim Senden an Discord: {e}")
+
 # Prüfen, auf Duplikate
 def is_already_logged(strava_id):
     query = {
@@ -142,6 +158,7 @@ def main():
     activities = get_strava_activities()
     valid_bike_sports = ["Ride", "GravelRide", "MountainBikeRide", "EBikeRide"]
 
+    saved = 0
     for act in activities:
         sport = act.get("sport_type", "")
         if sport not in valid_bike_sports:
@@ -152,6 +169,11 @@ def main():
             continue
         save_to_notion(act)
         logging.info(f"✅ Gespeichert: {act['name']}")
+        saved += 1
+
+    if saved > 0:
+        text = "eine neue Strava-Fahrt" if saved == 1 else f"{saved} neue Strava-Fahrten"
+        send_discord_message(f"🚴 {text} erfolgreich in Notion gespeichert.")
 
 if __name__ == "__main__":
     logging.info("🔌 Skript start:")
