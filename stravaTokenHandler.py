@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import logging
 import requests
 from dotenv import load_dotenv
 
@@ -21,18 +22,15 @@ def load_tokens():
     with open(TOKEN_FILE, "r") as f:
         return json.load(f)
 
-
 def save_tokens(token_data):
     with open(TOKEN_FILE, "w") as f:
         json.dump(token_data, f, indent=2)
 
-
 def is_token_expired(token_data):
     return int(token_data.get("expires_at", 0)) <= int(time.time())
 
-
 def refresh_token(token_data):
-    print("🔁 Access Token abgelaufen – Aktualisierung wird durchgeführt...")
+    logging.info("🔁 Access Token abgelaufen – Aktualisierung wird durchgeführt...")
     url = "https://www.strava.com/oauth/token"
     data = {
         "client_id": CLIENT_ID,
@@ -51,9 +49,8 @@ def refresh_token(token_data):
         "expires_at": new_tokens["expires_at"]
     }
     save_tokens(updated_token_data)
-    print("✅ Access Token aktualisiert und gespeichert.")
+    logging.info("✅ Access Token aktualisiert und gespeichert.")
     return updated_token_data
-
 
 def get_valid_access_token():
     token_data = load_tokens()
@@ -65,4 +62,4 @@ def get_valid_access_token():
 # Beispiel-Aufruf
 if __name__ == "__main__":
     access_token = get_valid_access_token()
-    print("🔐 Aktueller Access Token:", access_token)
+    logging.info("🔐 Aktueller Access Token:", access_token)

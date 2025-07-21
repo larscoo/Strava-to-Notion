@@ -1,5 +1,6 @@
 import os
 import requests
+import logging
 from notion_client import Client
 from dotenv import load_dotenv
 from datetime import timedelta
@@ -12,6 +13,14 @@ load_dotenv()
 STRAVA_TOKEN = None
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 NOTION_DB_ID = os.getenv("NOTION_DB_ID")
+
+# Logging konfigurieren
+logging.basicConfig(
+    filename="strava.log",
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
 
 # Notion Client initialisieren
 notion = Client(auth=NOTION_TOKEN)
@@ -32,7 +41,7 @@ def is_already_logged(strava_id):
 
 # Strava Token aktualisieren
 def refresh_strava_token():
-    print("🔁 Aktualisiere Strava Access Token...")
+    logging.info("🔁 Aktualisiere Strava Access Token...")
     url = "https://www.strava.com/oauth/token"
     data = {
         "client_id": os.getenv("STRAVA_CLIENT_ID"),
@@ -49,7 +58,7 @@ def refresh_strava_token():
     new_refresh_token = tokens["refresh_token"]
 
     # Optional: neue Tokens in .env zurückschreiben oder speichern
-    print("✅ Neuer Access Token erhalten.")
+    logging.info("✅ Neuer Access Token erhalten.")
     return new_access_token
 
 # Zeit formatieren
@@ -136,15 +145,15 @@ def main():
     for act in activities:
         sport = act.get("sport_type", "")
         if sport not in valid_bike_sports:
-            print(f"⏭ Überspringe {act.get('name')} ({sport}) – nicht relevant.")
+            logging.info(f"⏭ Überspringe {act.get('name')} ({sport}) – nicht relevant.")
             continue
         if is_already_logged(act["id"]):
-            print(f"⏭ {act['name']} – bereits eingetragen.")
+            logging.info(f"⏭ {act['name']} – bereits eingetragen.")
             continue
         save_to_notion(act)
-        print(f"✅ Gespeichert: {act['name']}")
+        logging.info(f"✅ Gespeichert: {act['name']}")
 
 if __name__ == "__main__":
-    print("🔌 Skript start:")
+    logging.info("🔌 Skript start:")
     STRAVA_TOKEN = get_valid_access_token()
     main()
