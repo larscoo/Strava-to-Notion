@@ -96,7 +96,7 @@ def get_strava_activities():
 # Aktivitäten speichern
 def save_to_notion(activity):
     title = activity.get("name")
-    date = activity.get("start_date_local")
+    date = activity.get("start_date_local", "").split("T")[0]
     distance_km = round(activity.get("distance", 0) / 1000, 1)
     moving_time = activity.get("moving_time", 0)
     elapsed_time = activity.get("elapsed_time", 0)
@@ -127,8 +127,8 @@ def save_to_notion(activity):
         "Name": {"title": [{"text": {"content": title}}]},
         "Datum": {"date": {"start": date}},
         "Länge": {"number": distance_km},
-        "Fahrzeit": {"rich_text": [{"text": {"content": format_duration(elapsed_time)}}]},
-        "Dauer": {"rich_text": [{"text": {"content": format_duration(moving_time)}}]},
+        "Fahrzeit": {"rich_text": [{"text": {"content": format_duration(moving_time)}}]},
+        "Dauer": {"rich_text": [{"text": {"content": format_duration(elapsed_time)}}]},
         "Ø - Geschw.": {"number": average_speed},
         "Max. Geschw.": {"number": max_speed},
         "Höhenm.": {"number": elevation_gain},
@@ -159,11 +159,19 @@ def main():
     valid_bike_sports = ["Ride", "GravelRide", "MountainBikeRide", "EBikeRide"]
 
     saved = 0
+
     for act in activities:
         sport = act.get("sport_type", "")
+        title = act.get("name", "").strip().upper()
+
         if sport not in valid_bike_sports:
             logging.info(f"⏭ Überspringe {act.get('name')} ({sport}) – nicht relevant.")
             continue
+
+        if title in ["B2W", "B2H"]:
+            logging.info(f"⏭ Überspringe {act.get('name')} – ausgeschlossene Aktivität.")
+            continue
+
         if is_already_logged(act["id"]):
             logging.info(f"⏭ {act['name']} – bereits eingetragen.")
             continue
