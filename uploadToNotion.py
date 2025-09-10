@@ -14,9 +14,11 @@ STRAVA_TOKEN = None
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 NOTION_DB_ID = os.getenv("NOTION_DB_ID")
 
+os.makedirs("logs", exist_ok=True)
+
 # Logging konfigurieren
 logging.basicConfig(
-    filename="strava.log",
+    filename="logs/strava.log",
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S"
