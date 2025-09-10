@@ -71,8 +71,8 @@ Die Antwort sieht dann folgendermassen aus:
 {"token_type":"Bearer","expires_at":1753228041,"expires_in":21600,"refresh_token":"token","access_token":"token","athlete":{"id":90841942,"username":"larscools","resource_state":2,"firstname":"Lars","lastname":"Cools","bio":null,"city":"Glarus","state":"","country":"Switzerland","sex":"M","premium":false,"summit":false,"created_at":"2021-08-19T12:26:50Z","updated_at":"2025-07-17T13:58:32Z","badge_type_id":0,"weight":0.0,"profile_medium":"https://dgalywyr863hv.cloudfront.net/pictures/athletes/90841942/25554900/2/medium.jpg","profile":"https://dgalywyr863hv.cloudfront.net/pictures/athletes/90841942/25554900/2/large.jpg","friend":null,"follower":null}}
 ```
 
--> beinhaltet refresh_token und access_token
--> mit refresh_token kann ein neuer Token generiert werden, wenn dieser abgelaufen ist
+→ beinhaltet refresh_token und access_token<br>
+→ mit refresh_token kann ein neuer Token generiert werden, wenn dieser abgelaufen ist
 
 ---
 
