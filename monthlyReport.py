@@ -13,7 +13,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler("monthly_report.log"),
+        logging.FileHandler("logs/monthly_report.log"),
         logging.StreamHandler()
     ]
 )

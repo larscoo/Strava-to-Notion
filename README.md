@@ -43,6 +43,8 @@ Erstelle im Projektverzeichnis eine Datei `.env`:
 
 ```env
 STRAVA_TOKEN=dein_strava_access_token
+STRAVA_CLIENT_ID=deine_strava_client_id
+STRAVA_CLIENT_SECRET=dein_strava_client_secret
 NOTION_TOKEN=dein_notion_integration_token
 NOTION_DB_ID=deine_notion_datenbank_id
 DISCORD_WEBHOOK=https://discord.com/api/webhooks/xyz
@@ -51,6 +53,26 @@ DISCORD_WEBHOOK=https://discord.com/api/webhooks/xyz
 
 > ℹ️ Hol dir dein `access_token` von Strava über OAuth:  
 > [Strava OAuth Anleitung ↗](https://developers.strava.com/docs/getting-started/#oauth)
+
+
+**Automatisches aktualisieren des Access Token's (manuell)**
+
+Im Terminal folgenden Befehl absetzen:
+```bash
+curl -X POST https://www.strava.com/oauth/token \
+  -F client_id=strava_client_id \
+  -F client_secret=strava_client_secret \
+  -F code=strava_access_code \
+  -F grant_type=authorization_code
+```
+
+Die Antwort sieht dann folgendermassen aus:
+```bash
+{"token_type":"Bearer","expires_at":1753228041,"expires_in":21600,"refresh_token":"token","access_token":"token","athlete":{"id":90841942,"username":"larscools","resource_state":2,"firstname":"Lars","lastname":"Cools","bio":null,"city":"Glarus","state":"","country":"Switzerland","sex":"M","premium":false,"summit":false,"created_at":"2021-08-19T12:26:50Z","updated_at":"2025-07-17T13:58:32Z","badge_type_id":0,"weight":0.0,"profile_medium":"https://dgalywyr863hv.cloudfront.net/pictures/athletes/90841942/25554900/2/medium.jpg","profile":"https://dgalywyr863hv.cloudfront.net/pictures/athletes/90841942/25554900/2/large.jpg","friend":null,"follower":null}}
+```
+
+-> beinhaltet refresh_token und access_token
+-> mit refresh_token kann ein neuer Token generiert werden, wenn dieser abgelaufen ist
 
 ---
 
@@ -102,6 +124,7 @@ crontab -e
   ```
   .env
   .venv/
+  .idea/
   ```
 
 ---
@@ -112,9 +135,3 @@ Dieses Projekt ist ideal für alle, die:
 - ihre Bike-Aktivitäten gerne tracken & auswerten 📊
 - Notion als zentrales Dashboard nutzen
 - einen schönen Überblick über ihre Touren wünschen 🌄
-
----
-
-## 🛠 ToDo
-
-- [ ] 
