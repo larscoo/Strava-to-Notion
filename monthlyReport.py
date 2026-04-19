@@ -1,105 +1,143 @@
+import logging
 import os
+import sys
+from datetime import datetime, timedelta
+
 import requests
 from notion_client import Client
-from dotenv import load_dotenv
-from datetime import datetime, timedelta
-import logging
 
-# .env laden
-load_dotenv()
+from config import NOTION_TOKEN, SYNC_TARGETS
 
-# Logging konfigurieren
+os.makedirs("logs", exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
         logging.FileHandler("logs/monthly_report.log"),
-        logging.StreamHandler()
-    ]
+        logging.StreamHandler(sys.stdout),
+    ],
+    force=True,
 )
 
-# Notion Setup
-NOTION_TOKEN = os.getenv("NOTION_TOKEN")
-NOTION_DB_ID = os.getenv("NOTION_DB_ID")
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("notion_client").setLevel(logging.WARNING)
+
 notion = Client(auth=NOTION_TOKEN)
 
-# Discord
+
 def send_discord_message(content):
     webhook_url = os.getenv("DISCORD_WEBHOOK")
     if not webhook_url:
         logging.warning("Kein Discord Webhook gefunden.")
         return
-    payload = {"content": content}
+
     try:
-        response = requests.post(webhook_url, json=payload)
+        response = requests.post(webhook_url, json={"content": content})
         if response.status_code == 204:
             logging.info("✅ Monatsbericht an Discord gesendet.")
         else:
-            logging.warning(f"⚠️ Discord Fehler: {response.status_code} – {response.text}")
-    except Exception as e:
-        logging.error(f"❌ Fehler beim Senden an Discord: {e}")
+            logging.warning("⚠️ Discord Fehler: %s – %s", response.status_code, response.text)
+    except Exception as exc:
+        logging.error("❌ Fehler beim Senden an Discord: %s", exc)
 
-# Bericht generieren
-def generate_monthly_report():
+
+def get_previous_month_date_range():
     today = datetime.today()
     first_day = (today.replace(day=1) - timedelta(days=1)).replace(day=1)
     last_day = today.replace(day=1) - timedelta(days=1)
+    return first_day, last_day
 
-    logging.info(f"📆 Bericht für {first_day.strftime('%B %Y')} wird erstellt...")
 
-    filter_query = {
-        "database_id": NOTION_DB_ID,
-        "filter": {
+def query_monthly_pages(database_id, start_date, end_date):
+    return notion.databases.query(
+        database_id=database_id,
+        filter={
             "and": [
-                {
-                    "property": "Datum",
-                    "date": {
-                        "on_or_after": first_day.strftime("%Y-%m-%d")
-                    }
-                },
-                {
-                    "property": "Datum",
-                    "date": {
-                        "on_or_before": last_day.strftime("%Y-%m-%d")
-                    }
-                }
+                {"property": "Datum", "date": {"on_or_after": start_date}},
+                {"property": "Datum", "date": {"on_or_before": end_date}},
             ]
-        }
-    }
+        },
+    )["results"]
 
-    results = notion.databases.query(**filter_query)
-    if not results["results"]:
+
+def get_summary_value(page, target):
+    summary_property = target["summary_property"]
+    summary_prop = page["properties"].get(summary_property, {})
+
+    if "select" in summary_prop:
+        return summary_prop.get("select", {}).get("name") or target["summary_default"]
+
+    return target["summary_default"]
+
+
+def build_target_stats(target, pages):
+    stats = {}
+
+    for page in pages:
+        props = page["properties"]
+        category = get_summary_value(page, target)
+        distance_prop = props.get("Länge") or props.get("Distanz") or {}
+        distance = distance_prop.get("number", 0) or 0
+        elevation = props.get("Höhenm.", {}).get("number", 0) or 0
+
+        if category not in stats:
+            stats[category] = {"count": 0, "distance": 0.0, "elevation": 0}
+
+        stats[category]["count"] += 1
+        stats[category]["distance"] += distance
+        stats[category]["elevation"] += elevation
+
+    return stats
+
+
+def format_target_report(target_key, target, pages):
+    if not pages:
+        return None
+
+    label_emoji = {"bike": "🚴", "run": "🏃"}.get(target_key, "📌")
+    stats = build_target_stats(target, pages)
+    lines = [f"{label_emoji} **{target['label']}**"]
+
+    for category, values in stats.items():
+        lines.append(
+            f"- {category}: {values['count']} Aktivitäten | {round(values['distance'])} km | {values['elevation']} hm"
+        )
+
+    return "\n".join(lines)
+
+
+def generate_monthly_report():
+    first_day, last_day = get_previous_month_date_range()
+    month_str = first_day.strftime("%B %Y")
+    logging.info("📆 Bericht für %s wird erstellt...", month_str)
+
+    sections = [f"**📆 Monatsbericht – {month_str}**"]
+
+    for target_key, target in SYNC_TARGETS.items():
+        database_id = target["database_id"]
+        if not database_id:
+            logging.warning("⏭ Überspringe Monatsbericht für %s – keine DB konfiguriert.", target["label"])
+            continue
+
+        pages = query_monthly_pages(
+            database_id,
+            first_day.strftime("%Y-%m-%d"),
+            last_day.strftime("%Y-%m-%d"),
+        )
+
+        section = format_target_report(target_key, target, pages)
+        if section:
+            sections.append(section)
+
+    if len(sections) == 1:
         logging.info("ℹ️ Keine Aktivitäten im letzten Monat gefunden.")
         return
 
-    stats = {}
-    for page in results["results"]:
-        props = page["properties"]
-        bike = props["Art of Bike"].get("select", {}).get("name", "Unbekannt")
-        dist = props["Länge"].get("number", 0)
-        elev = props["Höhenm."].get("number", 0)
+    send_discord_message("\n".join(sections))
 
-        if bike not in stats:
-            stats[bike] = {"fahrten": 0, "km": 0.0, "hm": 0}
-        stats[bike]["fahrten"] += 1
-        stats[bike]["km"] += dist or 0
-        stats[bike]["hm"] += elev or 0
 
-    month_str = first_day.strftime("%B %Y")
-    msg_lines = [f"**📆 Monatsbericht – {month_str}**"]
-
-    emoji_map = {"MTB": "🚵", "Gravel": "🚴", "E-MTB": "⚡🚵"}
-
-    for bike, data in stats.items():
-        emoji = emoji_map.get(bike, "🚴")
-        msg_lines.append(
-            f"{emoji} **{bike}:** {data['fahrten']} Fahrten | {round(data['km'])}km | {data['hm']}höm"
-        )
-
-    discord_msg = "\n".join(msg_lines)
-    send_discord_message(discord_msg)
-
-# Start
 if __name__ == "__main__":
     logging.info("🔁 Starte Monatsbericht...")
     generate_monthly_report()

@@ -14,6 +14,7 @@ TOKEN_FILE = "stravaToken.json"
 # CLIENT Daten aus .env
 CLIENT_ID = os.getenv("STRAVA_CLIENT_ID")
 CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET")
+logger = logging.getLogger(__name__)
 
 
 def load_tokens():
@@ -29,10 +30,8 @@ def save_tokens(token_data):
 def is_token_expired(token_data):
     return int(token_data.get("expires_at", 0)) <= int(time.time())
 
-logging.basicConfig(level=logging.INFO)
-
 def refresh_token(token_data):
-    logging.info("🔁 Access Token abgelaufen – Aktualisierung wird durchgeführt...")
+    logger.info("🔁 Access Token abgelaufen – Aktualisierung wird durchgeführt...")
     url = "https://www.strava.com/oauth/token"
     data = {
         "client_id": CLIENT_ID,
@@ -46,9 +45,9 @@ def refresh_token(token_data):
     # <<< WICHTIG: Fehlermeldung sichtbar machen
     if response.status_code != 200:
         try:
-            logging.error("Strava error payload: %s", response.json())
+            logger.error("Strava error payload: %s", response.json())
         except Exception:
-            logging.error("Strava error text: %s", response.text)
+            logger.error("Strava error text: %s", response.text)
         response.raise_for_status()
 
     new_tokens = response.json()
@@ -58,7 +57,7 @@ def refresh_token(token_data):
         "expires_at": new_tokens["expires_at"],
     }
     save_tokens(updated_token_data)
-    logging.info("✅ Access Token aktualisiert und gespeichert.")
+    logger.info("✅ Access Token aktualisiert und gespeichert.")
     return updated_token_data
 
 def get_valid_access_token():
@@ -70,5 +69,4 @@ def get_valid_access_token():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     access_token = get_valid_access_token()
-    logging.info("🔐 Aktueller Access Token: %s", access_token)  # statt zwei Args
-    # oder: logging.info(f"🔐 Aktueller Access Token: {access_token}")
+    logger.info("🔐 Aktueller Access Token: %s", access_token)
