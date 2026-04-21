@@ -82,9 +82,89 @@ python monthlyReport.py
 
 Der Report aggregiert Bike und Run getrennt über ihre jeweiligen Notion-Datenbanken und sendet eine gemeinsame Discord-Nachricht.
 
+## Server-Setup
+
+Empfohlener Ablauf:
+
+1. Repo einmal auf den Server klonen, z. B. nach `/opt/strava-to-notion`
+2. `.venv`, `.env` und `stravaToken.json` dort einmalig einrichten
+3. Änderungen nur noch per `git pull` ausrollen
+
+Deploy auf dem Server:
+
+```bash
+cd /opt/strava-to-notion
+bash deploy.sh
+```
+
+`deploy.sh` macht:
+
+- `git pull --ff-only`
+- `pip install -r requirements.txt`
+- Syntax-Check der Python-Dateien
+
+Die produktiven Secrets bleiben auf dem Server in:
+
+- `.env`
+- `stravaToken.json`
+
+## Cronjob
+
+Für Cron liegen zwei Wrapper-Skripte im Repo:
+
+- `run_sync.sh`
+- `run_monthly_report.sh`
+
+Beispiel:
+
+```cron
+*/30 * * * * cd /opt/strava-to-notion && bash run_sync.sh >> logs/cron.log 2>&1
+0 8 1 * * cd /opt/strava-to-notion && bash run_monthly_report.sh >> logs/cron.log 2>&1
+```
+
+Damit zeigt dein Cronjob immer auf stabile Wrapper-Skripte und nicht direkt auf einzelne Python-Dateien.
+
+## Optionaler schneller Deploy von lokal
+
+Wenn du per SSH auf den Server kommst, reicht künftig:
+
+```bash
+ssh dein-server 'cd /opt/strava-to-notion && bash deploy.sh'
+```
+
+## Privates Repo auf Ubuntu Server
+
+Für ein privates Repo ist SSH mit einem Deploy Key die einfachste Variante.
+
+Auf dem Server:
+
+```bash
+ssh-keygen -t ed25519 -C "strava-server"
+cat ~/.ssh/id_ed25519.pub
+```
+
+Den ausgegebenen Public Key dann im privaten GitHub- oder GitLab-Repo als Deploy Key hinterlegen.
+
+Test:
+
+```bash
+ssh -T git@github.com
+```
+
+Danach kannst du das Repo direkt klonen:
+
+```bash
+git clone git@github.com:USER/REPO.git
+```
+
+Wenn du mehrere SSH-Keys auf dem Server verwendest, hilft zusätzlich eine `~/.ssh/config`.
+
 ## Struktur
 
 - [uploadToNotion.py](/Volumes/fhgr/Code-Projekte/Strava-to-Notion/uploadToNotion.py)
 - [monthlyReport.py](/Volumes/fhgr/Code-Projekte/Strava-to-Notion/monthlyReport.py)
 - [config.py](/Volumes/fhgr/Code-Projekte/Strava-to-Notion/config.py)
 - [stravaTokenHandler.py](/Volumes/fhgr/Code-Projekte/Strava-to-Notion/stravaTokenHandler.py)
+- [deploy.sh](/Volumes/fhgr/Code-Projekte/Strava-to-Notion/deploy.sh)
+- [run_sync.sh](/Volumes/fhgr/Code-Projekte/Strava-to-Notion/run_sync.sh)
+- [run_monthly_report.sh](/Volumes/fhgr/Code-Projekte/Strava-to-Notion/run_monthly_report.sh)
